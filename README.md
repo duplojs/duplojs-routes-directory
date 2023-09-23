@@ -2,7 +2,7 @@
 
 ## Instalation
 ```
-
+npm i @duplojs/routes-directory
 ```
 
 ## Utilisation
