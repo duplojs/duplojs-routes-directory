@@ -13,10 +13,10 @@ import duploRoutesDirectory, {matchScriptFile} from "@duplojs/routes-directory";
 const duplo = Duplo({port: 1506, host: "0.0.0.0"});
 
 duplo.use(
-	duploRoutesDirectory, 
-	{
-		path: "./routes",
-		matchs: [matchScriptFile]
-	}
+    duploRoutesDirectory, 
+    {
+        path: "./routes",
+        matchs: [matchScriptFile]
+    }
 ).then(() => duplo.launch());
 ```
