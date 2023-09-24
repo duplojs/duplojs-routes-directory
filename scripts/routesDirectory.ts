@@ -5,7 +5,7 @@ import ignore from "ignore";
 
 type DuploRoutesDirectoryMatchs = {
 	pattern: RegExp,
-	handler: (instance: DuploInstance<DuploConfig>, options: DuploRoutesDirectoryOptions, path: string) => PromiseOrNot<void>,
+	handler: (instance: DuploInstance<DuploConfig>, options: DuploRoutesDirectoryOptions, path: string) => PromiseOrNot<any>,
 	ignores?: string[],
 };
 
@@ -23,21 +23,25 @@ function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: Du
     
 	if(!existsSync(options.path)) mkdirSync(options.path, {recursive: true});
     
-	return (async function pathFinding(path){
+	const files: PromiseOrNot<any>[] = [];
+	
+	(function pathFinding(path, arr: PromiseOrNot<any>[]){
 		for(const file of readdirSync(path)){
 			const fullPath = resolve(path, file);
 			if(ig.ignores(relative(options.path as string, fullPath))) continue;
 
-			if(lstatSync(fullPath).isDirectory()) await pathFinding(fullPath);
+			if(lstatSync(fullPath).isDirectory()) pathFinding(fullPath, arr);
 
 			const match = options.matchs?.find(match => match.pattern.test(file));
 			if(match){
 				const subIg = ignore().add(match.ignores || []);
 				if(subIg.ignores(relative(options.path as string, fullPath))) continue;
-				await match.handler(instance, options, fullPath);
+				arr.push(match.handler(instance, options, fullPath));
 			}
 		}
-	})(options.path);
+	})(options.path, files);
+
+	return Promise.all(files);
 }
 
 export default duploRoutesDirectory;
