@@ -2,6 +2,13 @@ import {DuploConfig, DuploInstance, PromiseOrNot} from "@duplojs/duplojs";
 import {existsSync, lstatSync, mkdirSync, readdirSync} from "fs";
 import {relative, resolve} from "path";
 import ignore from "ignore";
+import packageJson from "../package.json";
+
+declare module "@duplojs/duplojs" {
+	interface Plugins {
+		"@duplojs/routes-directory": {version: string},
+	}
+}
 
 type DuploRoutesDirectoryMatchs = {
 	pattern: RegExp,
@@ -16,6 +23,8 @@ interface DuploRoutesDirectoryOptions {
 }
 
 function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: DuploRoutesDirectoryOptions){
+	instance.plugins["@duplojs/routes-directory"] = {version: packageJson.version};
+
 	if(!options) options = {};
 	options.path = resolve(options.path || "./routes");
 	options.matchs = options.matchs || [];
@@ -46,22 +55,41 @@ function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: Du
 
 export default duploRoutesDirectory;
 
-export const matchScriptFile: DuploRoutesDirectoryMatchs = {
-	pattern: /\.[jt]sx?$/,
-	async handler(instance, options, path){
-		const imported = await import(path);
-		if(!imported.default || typeof imported.default !== "function") return;
-		imported.default(path.replace(options.path as string, "").replace(this.pattern, ""));
-	},
-	ignores: ["_**", "test.**"]
+function matchScriptFile(importer: (path: string) => Promise<any>){
+	matchScriptFile.importer = importer;
+	return matchScriptFile;
+}
+matchScriptFile.importer = (path: string) => import(path);
+matchScriptFile.pattern = /\.[jt]sx?$/;
+matchScriptFile.ignore = ["_**", "test.**"];
+matchScriptFile.handler = async(
+	instance: DuploInstance<DuploConfig>, 
+	options: DuploRoutesDirectoryOptions, 
+	path: string
+) => {
+	const imported = await matchScriptFile.importer(path);
+	if(!imported.default || typeof imported.default !== "function") return;
+	imported.default(path.replace(options.path as string, "").replace(matchScriptFile.pattern, ""));
 };
 
-export const matchHtmlOrCSSFile: DuploRoutesDirectoryMatchs = {
-	pattern: /\.(:?html|css)$/i,
-	async handler(instance, options, path){
-		instance
-		.declareRoute("GET", path.replace(options.path as string, ""))
-		.handler(({}, response) => response.code(200).sendFile(path));
-	},
-	ignores: ["_**", "test.**"]
+function matchHtmlOrCSSFile(importer: (path: string) => Promise<any>){
+	matchHtmlOrCSSFile.importer = importer;
+	return matchHtmlOrCSSFile;
+}
+matchHtmlOrCSSFile.importer = (path: string) => import(path);
+matchHtmlOrCSSFile.pattern = /\.(html|css)$/;
+matchHtmlOrCSSFile.ignore = ["_**", "test.**"];
+matchHtmlOrCSSFile.handler = async(
+	instance: DuploInstance<DuploConfig>, 
+	options: DuploRoutesDirectoryOptions, 
+	path: string
+) => {
+	instance
+	.declareRoute("GET", path.replace(options.path as string, ""))
+	.handler(({}, response) => response.code(200).sendFile(path));
+};
+
+export {
+	matchScriptFile,
+	matchHtmlOrCSSFile,
 };
