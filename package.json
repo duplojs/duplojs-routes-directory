@@ -6,7 +6,7 @@
   "repository": "https://github.com/duplojs/duplojs-routes-directory",
   "license": "ISC",
   "keywords": [],
-  "types": "./types/routesDirectory.ts",
+  "types": "./types/scripts/routesDirectory.ts",
   "exports": {
     "default": {
       "import": "./dist/routesDirectory.mjs",
@@ -21,14 +21,16 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "nodemon --exec 'ts-node test/index.ts'",
+    "dev": "nodemon --exec 'ts-node test'",
     "build": "rollup --config && npx tsc"
   },
   "dependencies": {
-    "@duplojs/duplojs": ">=0.6.13",
+    "@duplojs/duplojs": ">=0.13.20",
     "ignore": "^5.2.4"
   },
   "devDependencies": {
+    "@duplojs/worker-testing": "^0.1.4",
+    "@rollup/plugin-json": "^6.0.1",
     "@types/node": "^18.15.11",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
