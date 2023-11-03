@@ -1,1 +1,3 @@
-export default (path: string) => console.log(path);
+import {parentPort} from "worker_threads";
+
+export default (path: string) => parentPort?.postMessage(path);
