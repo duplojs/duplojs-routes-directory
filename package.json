@@ -21,15 +21,17 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "nodemon --exec 'ts-node --transpiler sucrase/ts-node-plugin test'",
-    "build": "rollup --config && npx tsc"
+	"dev": "nodemon --exec 'npm run test:speed'",
+    "build": "rollup --config && npx tsc",
+	"test": "ts-node test",
+	"test:speed": "ts-node --transpiler sucrase/ts-node-plugin test --speed"
   },
   "dependencies": {
-    "@duplojs/duplojs": ">=0.13.23",
+    "@duplojs/duplojs": ">=0.13.28",
     "ignore": "^5.2.4"
   },
   "devDependencies": {
-    "@duplojs/worker-testing": "^0.1.5",
+    "@duplojs/worker-testing": "^0.2.5",
     "@rollup/plugin-json": "^6.0.1",
     "@types/node": "^18.15.11",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
