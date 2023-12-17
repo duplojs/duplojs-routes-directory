@@ -17,8 +17,6 @@ export default workerTesting(
 	],
 	[
 		"/user/{id}",
-		"/user/{id}",
-		"/user",
 		"/user",
 		"/user",
 	]
