@@ -3,17 +3,13 @@ import {existsSync, lstatSync, mkdirSync, readdirSync} from "fs";
 import {relative, resolve} from "path";
 import ignore from "ignore";
 import packageJson from "../package.json";
+import {readFile, writeFile} from "fs/promises";
 
 declare module "@duplojs/duplojs" {
 	interface Plugins {
 		"@duplojs/routes-directory": {version: string},
 	}
 }
-
-declare global {
-	var CURRENT_PATH: string;
-}
-
 
 type DuploRoutesDirectoryMatchs = {
 	pattern: RegExp,
@@ -36,24 +32,25 @@ function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: Du
 	const ig = ignore().add(options.ignores || []);
     
 	if(!existsSync(options.path)) mkdirSync(options.path, {recursive: true});
-	
-	return (async function pathFinding(path){
+	const matchs: Promise<void>[] = [];
+
+	(function pathFinding(path){
 		for(const file of readdirSync(path)){
 			const fullPath = resolve(path, file);
 			if(ig.ignores(relative(options.path as string, fullPath))) continue;
 
-			if(lstatSync(fullPath).isDirectory()) await pathFinding(fullPath);
+			if(lstatSync(fullPath).isDirectory()) pathFinding(fullPath);
 
 			const match = options.matchs?.find(match => match.pattern.test(file));
 			if(match){
 				const subIg = ignore().add(match.ignores || []);
 				if(subIg.ignores(relative(options.path as string, fullPath))) continue;
-				global.CURRENT_PATH = fullPath;
-				await match.handler(instance, options, fullPath);
-				global.CURRENT_PATH = "";
+				matchs.push(match.handler(instance, options, fullPath));
 			}
 		}
 	})(options.path);
+
+	return Promise.all(matchs);
 }
 
 export default duploRoutesDirectory;
@@ -74,11 +71,17 @@ matchScriptFile.handler = async(
 	.replace(options.path as string, "")
 	.replace(matchScriptFile.pattern, "")
 	.replace(/\.[^/\\]*$/, "");
-	
-	CURRENT_PATH = urlPath;
 
 	const imported = await matchScriptFile.importer(path);
-	if(typeof imported.default === "function") imported.default(urlPath);
+	if(typeof imported.default === "function"){
+		const content = (await readFile(path, "utf-8")).split("\n");
+		const index = content.findIndex(value => value.trim().startsWith("export default"));
+		if(index !== -1 && !content[index - 1].includes(`/* PATH : ${urlPath} */`)){
+			content.splice(index, 0, `/* PATH : ${urlPath} */`);
+			await writeFile(path, content.join("\n"), "utf-8");
+		}
+		imported.default(urlPath);
+	}
 };
 
 function matchHtmlOrCSSFile(importer: (path: string) => Promise<any>){
