@@ -1,4 +1,4 @@
 import {parentPort} from "worker_threads";
 
-/* PATH : /user/{id} */
+/* PATH : /user */
 export default (path: string) => parentPort?.postMessage(path);

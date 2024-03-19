@@ -37,14 +37,18 @@ function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: Du
 	(function pathFinding(path){
 		for(const file of readdirSync(path)){
 			const fullPath = resolve(path, file);
-			if(ig.ignores(relative(options.path as string, fullPath))) continue;
+			if(ig.ignores(relative(options.path as string, fullPath))){ 
+				continue;
+			}
 
 			if(lstatSync(fullPath).isDirectory()) pathFinding(fullPath);
 
 			const match = options.matchs?.find(match => match.pattern.test(file));
 			if(match){
 				const subIg = ignore().add(match.ignores || []);
-				if(subIg.ignores(relative(options.path as string, fullPath))) continue;
+				if(subIg.ignores(relative(options.path as string, fullPath))){
+					continue;
+				}
 				matchs.push(match.handler(instance, options, fullPath));
 			}
 		}
@@ -55,13 +59,17 @@ function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: Du
 
 export default duploRoutesDirectory;
 
+const methods = [
+	"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"
+];
+
 function matchScriptFile(importer: (path: string) => Promise<any>){
 	matchScriptFile.importer = importer;
 	return matchScriptFile;
 }
 matchScriptFile.importer = (path: string) => import(path);
 matchScriptFile.pattern = /\.[jt]sx?$/;
-matchScriptFile.ignore = ["_**", "test.**"];
+matchScriptFile.ignore = [] as string[];
 matchScriptFile.handler = async(
 	instance: DuploInstance<DuploConfig>, 
 	options: DuploRoutesDirectoryOptions, 
@@ -69,20 +77,44 @@ matchScriptFile.handler = async(
 ) => {
 	const urlPath = path
 	.replace(options.path as string, "")
+	.replace(/\\/g, "/")
 	.replace(matchScriptFile.pattern, "")
-	.replace(/\.[^/\\]*$/, "");
+	.replace(/\.[^/\\]*$/, "")
+	.replace(/\/index$/, "") || "/";
 
 	const imported = await matchScriptFile.importer(path);
 	if(typeof imported.default === "function"){
-		const content = (await readFile(path, "utf-8")).split("\n");
-		const index = content.findIndex(value => value.trim().startsWith("export default"));
-		if(index !== -1 && !content[index - 1].includes(`/* PATH : ${urlPath} */`)){
-			content.splice(index, 0, `/* PATH : ${urlPath} */`);
-			await writeFile(path, content.join("\n"), "utf-8");
+		let content = await readFile(path, "utf-8");
+		const comment = `/* PATH : ${urlPath} */`;
+		if(!content.includes(comment)){
+			content = content.replace(
+				/\n?[ \t]*export default/g, 
+				`\n${comment}\nexport default`
+			);
+			await writeFile(path, content, "utf-8");
 		}
 		imported.default(urlPath);
 	}
+
+	if(methods.find(method => typeof imported[method] === "function")){
+		let content = await readFile(path, "utf-8");
+		for(const method of methods){
+			if(typeof imported[method] === "function"){
+				const comment = `/* METHOD : ${method}, PATH : ${urlPath} */`;
+				if(!content.includes(comment)){
+					content = content.replace(
+						new RegExp(`\\n?[ \\t]*export (:?const|let|var) ${method}`), 
+						`\n${comment}\nexport const ${method}`
+					);
+					await writeFile(path, content, "utf-8");
+				}
+				imported[method](method, urlPath);
+			}
+		}
+		
+	}
 };
+
 
 function matchHtmlOrCSSFile(importer: (path: string) => Promise<any>){
 	matchHtmlOrCSSFile.importer = importer;
@@ -90,7 +122,7 @@ function matchHtmlOrCSSFile(importer: (path: string) => Promise<any>){
 }
 matchHtmlOrCSSFile.importer = (path: string) => import(path);
 matchHtmlOrCSSFile.pattern = /\.(html|css)$/;
-matchHtmlOrCSSFile.ignore = ["_**", "test.**"];
+matchHtmlOrCSSFile.ignore = [] as string[];
 matchHtmlOrCSSFile.handler = async(
 	instance: DuploInstance<DuploConfig>, 
 	options: DuploRoutesDirectoryOptions, 
