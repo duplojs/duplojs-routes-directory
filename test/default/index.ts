@@ -16,8 +16,11 @@ export default workerTesting(
 		}
 	],
 	[
+		"/",
+		"/user",
 		"/user/{id}",
 		"/user",
 		"/user",
+		"GET:/",
 	]
 );
