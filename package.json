@@ -26,7 +26,7 @@
 	"test:types": "tsc"
   },
   "dependencies": {
-    "@duplojs/duplojs": ">=1.1.8 <2.0.0",
+    "@duplojs/duplojs": ">=1.2.12 <2.0.0",
     "ignore": "^5.2.4"
   },
   "devDependencies": {
