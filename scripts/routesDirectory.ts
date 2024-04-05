@@ -18,7 +18,7 @@ type DuploRoutesDirectoryMatchs = {
 };
 
 interface DuploRoutesDirectoryOptions {
-    path?: string;
+    path?: string | string[];
     matchs?: DuploRoutesDirectoryMatchs[];
 	ignores?: string[];
 }
@@ -26,33 +26,44 @@ interface DuploRoutesDirectoryOptions {
 function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: DuploRoutesDirectoryOptions){
 	instance.plugins["@duplojs/routes-directory"] = {version: packageJson.version};
 
-	if(!options) options = {};
-	options.path = resolve(options.path || "./routes");
+	if(!options){
+		options = {};
+	}
+	if(!options.path){
+		throw new Error("@duplojs/routes-directory: options need 'path' property.");
+	}
+	if(typeof options.path === "string"){
+		options.path = [options.path];
+	}
+	options.path = options.path.map((p) => resolve(p));
 	options.matchs = options.matchs || [];
 	const ig = ignore().add(options.ignores || []);
     
-	if(!existsSync(options.path)) mkdirSync(options.path, {recursive: true});
 	const matchs: Promise<void>[] = [];
+	
+	for(const path of options.path){
+		if(!existsSync(path)) mkdirSync(path, {recursive: true});
 
-	(function pathFinding(path){
-		for(const file of readdirSync(path)){
-			const fullPath = resolve(path, file);
-			if(ig.ignores(relative(options.path as string, fullPath))){ 
-				continue;
-			}
-
-			if(lstatSync(fullPath).isDirectory()) pathFinding(fullPath);
-
-			const match = options.matchs?.find(match => match.pattern.test(file));
-			if(match){
-				const subIg = ignore().add(match.ignores || []);
-				if(subIg.ignores(relative(options.path as string, fullPath))){
+		(function pathFinding(currentPath){
+			for(const file of readdirSync(currentPath)){
+				const fullPath = resolve(currentPath, file);
+				if(ig.ignores(relative(path as string, fullPath))){ 
 					continue;
 				}
-				matchs.push(match.handler(instance, options, fullPath));
+
+				if(lstatSync(fullPath).isDirectory()) pathFinding(fullPath);
+
+				const match = options.matchs?.find(match => match.pattern.test(file));
+				if(match){
+					const subIg = ignore().add(match.ignores || []);
+					if(subIg.ignores(relative(path as string, fullPath))){
+						continue;
+					}
+					matchs.push(match.handler(instance, options, fullPath));
+				}
 			}
-		}
-	})(options.path);
+		})(path);
+	}
 
 	return Promise.all(matchs);
 }
