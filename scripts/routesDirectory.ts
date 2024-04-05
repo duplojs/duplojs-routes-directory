@@ -59,7 +59,13 @@ function duploRoutesDirectory(instance: DuploInstance<DuploConfig>, options?: Du
 					if(subIg.ignores(relative(path as string, fullPath))){
 						continue;
 					}
-					matchs.push(match.handler(instance, options, fullPath));
+					matchs.push(
+						match.handler(
+							instance, 
+							{path, matchs: options.matchs, ignores: options.ignores}, 
+							fullPath
+						)
+					);
 				}
 			}
 		})(path);
