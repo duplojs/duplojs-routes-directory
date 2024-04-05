@@ -6,11 +6,12 @@
   "repository": "https://github.com/duplojs/duplojs-routes-directory",
   "license": "ISC",
   "keywords": [],
-  "types": "./types/scripts/routesDirectory.ts",
+  "types": "./types/routesDirectory.ts",
   "exports": {
     "default": {
       "import": "./dist/routesDirectory.mjs",
-      "require": "./dist/routesDirectory.cjs"
+      "require": "./dist/routesDirectory.cjs",
+	  "types": "./types/routesDirectory.ts"
     }
   },
   "files": [
