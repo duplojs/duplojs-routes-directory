@@ -11,7 +11,7 @@
     "default": {
       "import": "./dist/routesDirectory.mjs",
       "require": "./dist/routesDirectory.cjs",
-	  "types": "./types/routesDirectory.ts"
+	  "types": "./types/routesDirectory.d.ts"
     }
   },
   "files": [
